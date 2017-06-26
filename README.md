@@ -10,4 +10,4 @@ A simple file system implementation. It is limited in many ways:
 7. 256 files can be stored
 8. 32 files can be open at the same time
 9. Maximum file size is 270 data blocks
-10 A data block contains 1024 bytes of data
+10. A data block contains 1024 bytes of data
