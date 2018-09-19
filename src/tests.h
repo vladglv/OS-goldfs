@@ -5,12 +5,12 @@
  * Written by Xiru Zhu for Assignment 3.
  */
 
+#include "sfs_api.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/wait.h>
-#include "sfs_api.h"
+#include <unistd.h>
 
 /* The maximum file name length. We assume that filenames can contain
  * upper-case letters and periods ('.') characters. Feel free to
@@ -41,92 +41,51 @@ static char test_str[] = "Graphic Card is life. I need a 1080 for Christmas. "
                          "copying for the same repository.\n";
 
 // Random Text Generators
-char* rand_name();
+char *rand_name(void);
 
 // Seek
-int test_seek(int* file_id,
-              int* file_size,
-              int* write_ptr,
-              char** write_buf,
-              int num_file,
-              int offset,
-              int* err_no);
+int test_seek(int *file_id, int *file_size, int *write_ptr, char **write_buf,
+              int num_file, int offset, int *err_no);
 
 // Read Functions
-int test_read_all_files(int* file_id,
-                        int* file_size,
-                        char** write_buf,
-                        int num_file,
-                        int* err_no);
-int test_simple_read_files(int* file_id,
-                           int* file_size,
-                           char** write_buf,
-                           int num_file,
-                           int* err_no);
-int test_difficult_read_files(int* file_id,
-                              int* file_size,
-                              int* write_ptr,
-                              char** write_buf,
-                              int index,
-                              int read_length,
-                              int* err_no);
-int test_random_read_files(int* file_id,
-                           int* file_size,
-                           int* write_ptr,
-                           char** write_buf,
-                           int num_file,
-                           int* err_no);
+int test_read_all_files(int *file_id, int *file_size, char **write_buf,
+                        int num_file, int *err_no);
+int test_simple_read_files(int *file_id, int *file_size, char **write_buf,
+                           int num_file, int *err_no);
+int test_difficult_read_files(int *file_id, int *file_size, int *write_ptr,
+                              char **write_buf, int index, int read_length,
+                              int *err_no);
+int test_random_read_files(int *file_id, int *file_size, int *write_ptr,
+                           char **write_buf, int num_file, int *err_no);
 
 // Write Function
-int test_simple_write_files(int* file_id,
-                            int* file_size,
-                            int* write_ptr,
-                            char** write_buf,
-                            int num_file,
-                            int* err_no);
-int test_difficult_write_files(int* file_id,
-                               int* file_size,
-                               int* write_ptr,
-                               char** write_buf,
-                               int num_file,
-                               int* err_no);
-int test_write_to_overflow(int* file_id,
-                           int* file_size,
-                           char** write_buf,
-                           int num_file,
-                           int* err_no);
-int test_read_write_out_of_bound(int* file_id,
-                                 int* file_sizes,
-                                 char** file_names,
-                                 int num_file,
-                                 int* err_no);
+int test_simple_write_files(int *file_id, int *file_size, int *write_ptr,
+                            char **write_buf, int num_file, int *err_no);
+int test_difficult_write_files(int *file_id, int *file_size, int *write_ptr,
+                               char **write_buf, int num_file, int *err_no);
+int test_write_to_overflow(int *file_id, int *file_size, char **write_buf,
+                           int num_file, int *err_no);
+int test_read_write_out_of_bound(int *file_id, int *file_sizes,
+                                 char **file_names, int num_file, int *err_no);
 
 // Close/Remove Functions
-int test_remove_files(int* file_id,
-                      int* file_size,
-                      int* write_ptr,
-                      char** file_names,
-                      char** write_buf,
-                      int num_file,
-                      int* err_no);
-int
-test_close_files(char** file_names, int* file_id, int num_file, int* err_no);
+int test_remove_files(int *file_id, int *file_size, int *write_ptr,
+                      char **file_names, char **write_buf, int num_file,
+                      int *err_no);
+int test_close_files(char **file_names, int *file_id, int num_file,
+                     int *err_no);
 
 // Open file functions
-int
-test_open_new_files(char** file_names, int* file_id, int num_file, int* err_no);
-int
-test_open_old_files(char** file_names, int* file_id, int num_file, int* err_no);
-int test_overflow_open(int* file_id,
-                       int* file_sizes,
-                       int* write_ptr,
-                       char** file_names,
-                       char** write_buf,
-                       int num_file,
-                       int* err_no);
+int test_open_new_files(char **file_names, int *file_id, int num_file,
+                        int *err_no);
+int test_open_old_files(char **file_names, int *file_id, int num_file,
+                        int *err_no);
+int test_overflow_open(int *file_id, int *file_sizes, int *write_ptr,
+                       char **file_names, char **write_buf, int num_file,
+                       int *err_no);
 
 // Test persistence
-int test_persistence(int* error, int write_length);
+int test_persistence(int *error, int write_length);
 
 // Help functionn
-int free_name_element(char** name_list, int num_file);
+int free_name_element(char **name_list, int num_file);

@@ -1,167 +1,146 @@
+#include "disk_emu.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
-#include "disk_emu.h"
+#include <unistd.h>
 
-FILE* fp = NULL;
-double L, p;
-double r;
-int BLOCK_SIZE, MAX_BLOCK, MAX_RETRY, lru;
+static FILE *fp = NULL;
+static u64 BLOCK_SIZE = 0;
+static u64 MAX_BLOCK = 0;
 
 /*----------------------------------------------------------*/
 /*Close the disk file filled when you don't need it anymore. */
 /*----------------------------------------------------------*/
-int close_disk() {
-    if(fp != NULL)
-        fclose(fp);
+i64 close_disk(void) {
+  if (fp != NULL)
+    fclose(fp);
 
-    return 0;
+  return 0;
 }
 
 /*---------------------------------------*/
 /*Initializes a disk file filled with 0's*/
 /*---------------------------------------*/
-int init_fresh_disk(char* filename, int block_size, int num_blocks) {
-    int i, j;
+i64 init_fresh_disk(char *filename, u64 block_size, u64 num_blocks) {
+  u64 i, j;
 
-    /*Set up latency at 0.02 second*/
-    L = 00000.f;
-    /*Set up failure at 10%*/
-    p = -1.f;
-    /*Set up max retry attempts after failure to 3*/
-    MAX_RETRY = 3;
+  BLOCK_SIZE = block_size;
+  MAX_BLOCK = num_blocks;
 
-    BLOCK_SIZE = block_size;
-    MAX_BLOCK = num_blocks;
+  /*Creates a new file*/
+  fp = fopen(filename, "w+b");
 
-    /*Initializes the random number generator*/
-    srand((unsigned int)(time(0)));
-    /*Creates a new file*/
-    fp = fopen(filename, "w+b");
+  if (fp == NULL) {
+    printf("Could not create new disk file %s\n\n", filename);
+    return -1;
+  }
 
-    if(fp == NULL) {
-        printf("Could not create new disk file %s\n\n", filename);
-        return -1;
+  /*Fills the file with 0's to its given size*/
+  for (i = 0; i < MAX_BLOCK; i++) {
+    for (j = 0; j < BLOCK_SIZE; j++) {
+      fputc(0, fp);
     }
+  }
 
-    /*Fills the file with 0's to its given size*/
-    for(i = 0; i < MAX_BLOCK; i++) {
-        for(j = 0; j < BLOCK_SIZE; j++) {
-            fputc(0, fp);
-        }
-    }
-    return 0;
+  return 0;
 }
 /*----------------------------*/
 /*Initializes an existing disk*/
 /*----------------------------*/
-int init_disk(char* filename, int block_size, int num_blocks) {
-    /*Set up latency at 0.02 second*/
-    L = 00000.f;
-    /*Set up failure at 10%*/
-    p = -1.f;
-    /*Set up max retry attempts after failure to 3*/
-    MAX_RETRY = 3;
+i64 init_disk(char *filename, u64 block_size, u64 num_blocks) {
+  BLOCK_SIZE = block_size;
+  MAX_BLOCK = num_blocks;
 
-    BLOCK_SIZE = block_size;
-    MAX_BLOCK = num_blocks;
+  /*Opens a file*/
+  fp = fopen(filename, "r+b");
 
-    /*Initializes the random number generator*/
-    srand((unsigned int)(time(0)));
+  if (fp == NULL) {
+    printf("Could not open %s\n\n", filename);
+    return -1;
+  }
 
-    /*Opens a file*/
-    fp = fopen(filename, "r+b");
-
-    if(fp == NULL) {
-        printf("Could not open %s\n\n", filename);
-        return -1;
-    }
-    return 0;
+  return 0;
 }
 
 /*-------------------------------------------------------------------*/
 /*Reads a series of blocks from the disk into the buffer             */
 /*-------------------------------------------------------------------*/
-int read_blocks(int start_address, int nblocks, void* buffer) {
-    int i, j, e, s;
-    e = 0;
-    s = 0;
+i64 read_blocks(u64 start_address, u64 nblocks, void *buffer) {
+  u64 i, j;
+  i64 e = 0;
+  i64 s = 0;
 
-    /*Sets up a temporary buffer*/
-    void* blockRead = (void*)malloc(BLOCK_SIZE);
+  /*Sets up a temporary buffer*/
+  void *blockRead = (void *)malloc(BLOCK_SIZE);
 
-    /*Checks that the data requested is within the range of addresses of the
-     * disk*/
-    if(start_address + nblocks > MAX_BLOCK) {
-        printf("out of bound error %d\n", start_address);
-        return -1;
+  /*Checks that the data requested is within the range of addresses of the
+   * disk*/
+  if (start_address + nblocks > MAX_BLOCK) {
+    printf("out of bound error %ld\n", start_address);
+    return -1;
+  }
+
+  /*Goto the data requested from the disk*/
+  i64 offset = (i64)(start_address * BLOCK_SIZE);
+  fseek(fp, offset, SEEK_SET);
+
+  /*For every block requested*/
+  for (i = 0; i < nblocks; ++i) {
+    s++;
+    fread(blockRead, BLOCK_SIZE, 1, fp);
+
+    for (j = 0; j < BLOCK_SIZE; j++) {
+      memcpy(((char *)buffer) + (i * BLOCK_SIZE), blockRead, BLOCK_SIZE);
     }
+  }
 
-    /*Goto the data requested from the disk*/
-    fseek(fp, start_address * BLOCK_SIZE, SEEK_SET);
+  free(blockRead);
 
-    /*For every block requested*/
-    for(i = 0; i < nblocks; ++i) {
-        /*Pause until the latency duration is elapsed*/
-        // usleep(L);
-
-        s++;
-        fread(blockRead, BLOCK_SIZE, 1, fp);
-
-        for(j = 0; j < BLOCK_SIZE; j++) {
-            memcpy(((char*)buffer) + (i * BLOCK_SIZE), blockRead, BLOCK_SIZE);
-        }
-    }
-
-    free(blockRead);
-
-    /*If no failure return the number of blocks read, else return the negative
-     * number of failures*/
-    if(e == 0)
-        return s;
-    else
-        return e;
+  /*If no failure return the number of blocks read, else return the negative
+   * number of failures*/
+  if (e == 0)
+    return s;
+  else
+    return e;
 }
 
 /*------------------------------------------------------------------*/
 /*Writes a series of blocks to the disk from the buffer             */
 /*------------------------------------------------------------------*/
-int write_blocks(int start_address, int nblocks, const void* buffer) {
-    int i, e, s;
-    e = 0;
-    s = 0;
+i64 write_blocks(u64 start_address, u64 nblocks, const void *buffer) {
+  u64 i;
+  i64 e = 0;
+  i64 s = 0;
 
-    void* blockWrite = (void*)malloc(BLOCK_SIZE);
+  void *blockWrite = (void *)malloc(BLOCK_SIZE);
 
-    /*Checks that the data requested is within the range of addresses of the
-     * disk*/
-    if(start_address + nblocks > MAX_BLOCK) {
-        printf("out of bound error\n");
-        return -1;
-    }
+  /*Checks that the data requested is within the range of addresses of the
+   * disk*/
+  if (start_address + nblocks > MAX_BLOCK) {
+    printf("out of bound error\n");
+    return -1;
+  }
 
-    /*Goto where the data is to be written on the disk*/
-    fseek(fp, start_address * BLOCK_SIZE, SEEK_SET);
+  /*Goto where the data is to be written on the disk*/
+  i64 offset = (i64)(start_address * BLOCK_SIZE);
+  fseek(fp, offset, SEEK_SET);
 
-    /*For every block requested*/
-    for(i = 0; i < nblocks; ++i) {
-        /*Pause until the latency duration is elapsed*/
-        // usleep(L);
+  /*For every block requested*/
+  for (i = 0; i < nblocks; ++i) {
+    memcpy(blockWrite, ((const char *)buffer) + (i * BLOCK_SIZE), BLOCK_SIZE);
 
-        memcpy(blockWrite, ((char*)buffer) + (i * BLOCK_SIZE), BLOCK_SIZE);
+    fwrite(blockWrite, BLOCK_SIZE, 1, fp);
+    fflush(fp);
+    s++;
+  }
+  free(blockWrite);
 
-        fwrite(blockWrite, BLOCK_SIZE, 1, fp);
-        fflush(fp);
-        s++;
-    }
-    free(blockWrite);
-
-    /*If no failure return the number of blocks written, else return the
-     * negative number of failures*/
-    if(e == 0)
-        return s;
-    else
-        return e;
+  /*If no failure return the number of blocks written, else return the
+   * negative number of failures*/
+  if (e == 0)
+    return s;
+  else
+    return e;
 }

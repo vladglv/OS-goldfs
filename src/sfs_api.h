@@ -15,10 +15,10 @@
 #endif
 
 // - Macro to inhibit unused variable warnings
-#define UNUSED(expr)  \
-    do {              \
-        (void)(expr); \
-    } while(0)
+#define UNUSED(expr)                                                           \
+  do {                                                                         \
+    (void)(expr);                                                              \
+  } while (0)
 
 // - Defines for file system geometry
 #define BLOCK_SIZE 1024
@@ -51,15 +51,14 @@ static char MY_NAME[] = "goldfs";
 
 /**
  * @class _inode
- * @file sfs_api.h
  * @brief I-node structure for storage of file data. This structure is
  * stored on disk and cached in memory for faster access.
  */
 typedef struct __attribute__((packed)) _inode {
-    uint32_t size;                 //!< Size of the file
-    int32_t ptr[BLOCKS_PER_INODE]; //!< Data block locations
-    int16_t next;                  //!< Next block to look for I-nodes
-    int16_t free;                  //!< State of an I-node
+  uint32_t size;                 //!< Size of the file
+  int32_t ptr[BLOCKS_PER_INODE]; //!< Data block locations
+  int16_t next;                  //!< Next block to look for I-nodes
+  int16_t free;                  //!< State of an I-node
 } inode_t;
 
 #if 1
@@ -69,22 +68,21 @@ _Static_assert(sizeof(inode_t) == INODE_ENTRY_SIZE,
 
 /**
  * @class _super_block
- * @file sfs_api.h
  * @brief Super-block structure for the header of the disk. This structure
  * is stored on the disk and cached in memory for faster access.
  */
 typedef struct __attribute__((packed)) _super_block {
-    uint32_t magic;          //!< Magic
-    uint32_t blocks;         //!< Number of blocks
-    uint32_t blocks_size;    //!< Size of a block
-    int32_t sb_block_idx;    //!< Super-block starting index
-    int32_t sb_block_num;    //!< Super-block block count
-    int32_t fbm_block_idx;   //!< Free bit map starting index
-    int32_t fbm_block_num;   //!< Free bit map block count
-    int32_t dir_block_idx;   //!< Directory starting block index
-    int32_t dir_block_num;   //!< Directory blocks count
-    int32_t inode_block_idx; //!< I-node starting block index
-    int32_t inode_block_num; //!< I-node blocks count
+  uint32_t magic;          //!< Magic
+  uint32_t blocks;         //!< Number of blocks
+  uint32_t blocks_size;    //!< Size of a block
+  int32_t sb_block_idx;    //!< Super-block starting index
+  int32_t sb_block_num;    //!< Super-block block count
+  int32_t fbm_block_idx;   //!< Free bit map starting index
+  int32_t fbm_block_num;   //!< Free bit map block count
+  int32_t dir_block_idx;   //!< Directory starting block index
+  int32_t dir_block_num;   //!< Directory blocks count
+  int32_t inode_block_idx; //!< I-node starting block index
+  int32_t inode_block_num; //!< I-node blocks count
 } super_block_t;
 
 #if 1
@@ -92,26 +90,28 @@ _Static_assert(sizeof(super_block_t) <= BLOCK_SIZE,
                "super block size must be smaller or equal to BLOCK_SIZE");
 #endif
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wpacked"
+#endif
+
 /**
  * @class _fbm_table
- * @file sfs_api.h
  * @brief Free bit map table used for block allocation. This structure is
  * stored on the disk and cached in memory for faster access.
  */
 typedef struct __attribute__((packed)) _fbm_table {
-    uint8_t block[NUM_BLOCKS]; //!< State of a block: ENTRY_TAKEN or ENTRY_FREE
+  uint8_t block[NUM_BLOCKS]; //!< State of a block: ENTRY_TAKEN or ENTRY_FREE
 } fbm_table_t;
 
 /**
  * @class _dir_entry
- * @file sfs_api.h
  * @brief Directory entry used for mapping file-names to I-nodes. This
  * structure is stored on the disk and cached in memory for faster access.
  */
 typedef struct __attribute__((packed)) _dir_entry {
-    char fn[MAX_FN_LEN];  //!< File name
-    int8_t free;          //!< State of an entry: ENTRY_TAKEN or ENTRY_FREE
-    int32_t linked_inode; //!< I-node associated with this file name
+  char fn[MAX_FN_LEN];  //!< File name
+  int8_t free;          //!< State of an entry: ENTRY_TAKEN or ENTRY_FREE
+  int32_t linked_inode; //!< I-node associated with this file name
 } dir_entry_t;
 
 #if 1
@@ -121,15 +121,14 @@ _Static_assert(sizeof(dir_entry_t) == DIR_ENTRY_SIZE,
 
 /**
  * @class _file_entry
- * @file sfs_api.h
  * @brief File descriptor entry used for keeping track of open files. It
  * maps file descriptor to I-nodes. This structure is only stored in memory.
  */
 typedef struct __attribute__((packed)) _file_entry {
-    int8_t free;          //!< State of an entry: ENTRY_TAKEN or ENTRY_FREE
-    int32_t ptr_read;     //!< Absolute position of the read pointer
-    int32_t ptr_write;    //!< Absolute position of the write pointer
-    int32_t linked_inode; //!< I-node associated with this file descriptor
+  int8_t free;          //!< State of an entry: ENTRY_TAKEN or ENTRY_FREE
+  int32_t ptr_read;     //!< Absolute position of the read pointer
+  int32_t ptr_write;    //!< Absolute position of the write pointer
+  int32_t linked_inode; //!< I-node associated with this file descriptor
 } file_entry_t;
 
 // - Defines for file system special blocks
@@ -149,7 +148,7 @@ typedef struct __attribute__((packed)) _file_entry {
  * @param sb Super-block
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t sb_read(super_block_t* sb);
+int32_t sb_read(super_block_t *sb);
 
 /**
  * @brief Updates the Super-block on disk.
@@ -163,50 +162,50 @@ int32_t sb_update(const super_block_t sb);
  * @param sb Super-block
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t sb_init(super_block_t* sb);
+int32_t sb_init(super_block_t *sb);
 
 // - Free bit map management
 
 /**
  * @brief Reads the free bit map from disk.
- * @param fbm Free bit map table
+ * @param fbm_table Free bit map table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t fbm_read(fbm_table_t* fbm_table);
+int32_t fbm_read(fbm_table_t *fbm_table);
 
 /**
  * @brief Updates the free bit map on disk.
- * @param fbm Free bit map table
+ * @param fbm_table Free bit map table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
 int32_t fbm_update(const fbm_table_t fbm_table);
 
 /**
  * @brief Initialises the free bit map in memory.
- * @param fbm Free bit map table
+ * @param fbm_table Free bit map table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
 
-int32_t fbm_init(fbm_table_t* fbm_table);
+int32_t fbm_init(fbm_table_t *fbm_table);
 
 // - Block management (updates the free bit map table)
 
 /**
  * @brief Allocates a free block and returns its index. If the requested
  * index is taken, then, the function fails.
- * @param fbm Free bit map table
+ * @param fbm_table Free bit map table
  * @param idx A suggested index is considered only if the value of idx is >= 0
  * @return Index of the block or MY_ERR otherwise
  */
-int32_t block_allocate(fbm_table_t* fbm_table, int32_t idx);
+int32_t block_allocate(fbm_table_t *fbm_table, int32_t idx);
 
 /**
  * @brief Marks a block as free.
- * @param fbm Free bit map table
+ * @param fbm_table Free bit map table
  * @param idx Block index in free bit map
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t block_deallocate(fbm_table_t* fbm_table, int32_t idx);
+int32_t block_deallocate(fbm_table_t *fbm_table, int32_t idx);
 
 // - Directory management
 
@@ -217,7 +216,7 @@ int32_t block_deallocate(fbm_table_t* fbm_table, int32_t idx);
  * @param name File name
  * @return Index of the entry associated with name or MY_ERR otherwise
  */
-int32_t dir_find(dir_entry_t* d, uint32_t size, const char* name);
+int32_t dir_find(dir_entry_t *d, uint32_t size, const char *name);
 
 /**
  * @brief Removes the association of the I-node and a file-name.
@@ -226,7 +225,7 @@ int32_t dir_find(dir_entry_t* d, uint32_t size, const char* name);
  * @param name File name
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t dir_remove(dir_entry_t* d, uint32_t size, const char* name);
+int32_t dir_remove(dir_entry_t *d, uint32_t size, const char *name);
 
 /**
  * @brief Adds the association between the file-name and an I-node.
@@ -236,7 +235,7 @@ int32_t dir_remove(dir_entry_t* d, uint32_t size, const char* name);
  * @param node I-node index
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t dir_add(dir_entry_t* d, uint32_t size, const char* name, uint32_t node);
+int32_t dir_add(dir_entry_t *d, uint32_t size, const char *name, uint32_t node);
 
 /**
  * @brief Reads the directory from disk.
@@ -244,7 +243,7 @@ int32_t dir_add(dir_entry_t* d, uint32_t size, const char* name, uint32_t node);
  * @param size Size of the directory
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t dir_read(dir_entry_t* d, uint32_t size);
+int32_t dir_read(dir_entry_t *d, uint32_t size);
 
 /**
  * @brief Updates the directory on disk.
@@ -252,7 +251,7 @@ int32_t dir_read(dir_entry_t* d, uint32_t size);
  * @param size Size of the directory
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t dir_update(const dir_entry_t* d, uint32_t size);
+int32_t dir_update(const dir_entry_t *d, uint32_t size);
 
 /**
  * @brief Initialises the directory on disk.
@@ -260,7 +259,7 @@ int32_t dir_update(const dir_entry_t* d, uint32_t size);
  * @param size Size of the directory
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t dir_init(dir_entry_t* d, uint32_t size);
+int32_t dir_init(dir_entry_t *d, uint32_t size);
 
 // - File descriptor management
 
@@ -271,7 +270,7 @@ int32_t dir_init(dir_entry_t* d, uint32_t size);
  * @param fd File descriptor to remove
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t fdt_remove(file_entry_t* f, uint32_t size, int fd);
+int32_t fdt_remove(file_entry_t *f, uint32_t size, int fd);
 
 /**
  * @brief Find the first free file descriptor.
@@ -281,7 +280,7 @@ int32_t fdt_remove(file_entry_t* f, uint32_t size, int fd);
  * @return A new file descriptor or MY_ERR otherwise
  */
 
-int32_t fdt_add(file_entry_t* f, uint32_t size, uint32_t inode_idx);
+int32_t fdt_add(file_entry_t *f, uint32_t size, uint32_t inode_idx);
 
 /**
  * @brief Initialises the file descriptor table.
@@ -289,7 +288,7 @@ int32_t fdt_add(file_entry_t* f, uint32_t size, uint32_t inode_idx);
  * @param size Size of the file descriptor table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t fdt_init(file_entry_t* f, uint32_t size);
+int32_t fdt_init(file_entry_t *f, uint32_t size);
 
 // - I-node management
 
@@ -300,7 +299,7 @@ int32_t fdt_init(file_entry_t* f, uint32_t size);
  * @param idx Index of the I-node to look for
  * @return Index of the block where the I-node resides
  */
-int32_t inode_find(inode_t* p, uint32_t size, int32_t idx);
+int32_t inode_find(inode_t *p, uint32_t size, int32_t idx);
 
 /**
  * @brief Removes the I-node from the I-node table.
@@ -309,7 +308,7 @@ int32_t inode_find(inode_t* p, uint32_t size, int32_t idx);
  * @param idx Index of the I-node to look for
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t inode_remove(inode_t* p, uint32_t size, int32_t idx);
+int32_t inode_remove(inode_t *p, uint32_t size, int32_t idx);
 
 /**
  * @brief Allocates a new I-node to the I-node table.
@@ -317,7 +316,7 @@ int32_t inode_remove(inode_t* p, uint32_t size, int32_t idx);
  * @param size Size of the I-node table
  * @return Index of I-node in the table on success and MY_ERR otherwise
  */
-int32_t inode_allocate(inode_t* p, uint32_t size);
+int32_t inode_allocate(inode_t *p, uint32_t size);
 
 /**
  * @brief Initialises the I-node table.
@@ -325,7 +324,7 @@ int32_t inode_allocate(inode_t* p, uint32_t size);
  * @param size Size of the I-node table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t inode_init(inode_t* p, uint32_t size);
+int32_t inode_init(inode_t *p, uint32_t size);
 
 /**
  * @brief Reads the I-node table from disk.
@@ -333,7 +332,7 @@ int32_t inode_init(inode_t* p, uint32_t size);
  * @param size Size of the I-node table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t inode_read(inode_t* p, uint32_t size);
+int32_t inode_read(inode_t *p, uint32_t size);
 
 /**
  * @brief Updates the I-nodes table to disk.
@@ -341,7 +340,7 @@ int32_t inode_read(inode_t* p, uint32_t size);
  * @param size Size of the I-node table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t inode_update(const inode_t* p, uint32_t size);
+int32_t inode_update(const inode_t *p, uint32_t size);
 
 /**
  * @brief Obtains a list of blocks associated with an I-node.
@@ -349,7 +348,7 @@ int32_t inode_update(const inode_t* p, uint32_t size);
  * @param size Size of the block table
  * @return Address of the block table is returned on success and NULL otherwise
  */
-int32_t* inode_get_block_list(const inode_t p, uint32_t* size);
+int32_t *inode_get_block_list(const inode_t p, uint32_t *size);
 
 /**
  * @brief Sets a list of blocks associated with an I-node.
@@ -357,14 +356,14 @@ int32_t* inode_get_block_list(const inode_t p, uint32_t* size);
  * @param block_list List of blocks to set
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t inode_set_block_list(inode_t* p, int32_t* block_list);
+int32_t inode_set_block_list(inode_t *p, int32_t *block_list);
 
 /**
  * @brief Frees memory allocated by 'inode_get_block_list' call.
  * @param block_list Pointer to the block list
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t inode_free_block_list(int32_t* block_list);
+int32_t inode_free_block_list(int32_t *block_list);
 
 // - ssfs
 
@@ -383,7 +382,7 @@ void mkssfs(int fresh);
  * @param name File name
  * @return -1 on error or a file handle on success
  */
-int ssfs_fopen(char* name);
+int ssfs_fopen(char *name);
 
 /**
  * @brief Closes a file and frees a space in the file descriptor table.
@@ -417,7 +416,7 @@ int ssfs_fwseek(int fileID, int loc);
  * written, then, the data that could fit until maximum size is written and -1
  * is returned.
  */
-int ssfs_fwrite(int fileID, char* buf, int length);
+int ssfs_fwrite(int fileID, char *buf, int length);
 
 /**
  * @brief Reads a given amount of data to the file.
@@ -426,15 +425,15 @@ int ssfs_fwrite(int fileID, char* buf, int length);
  * @param length Length of the data to read
  * @return Number of bytes read or -1 on error.
  */
-int ssfs_fread(int fileID, char* buf, int length);
+int ssfs_fread(int fileID, char *buf, int length);
 
 /**
  * @brief Removes a file from the file system.
  * @param file Name of the file to be removed
  * @return -1 on error or 0 on success
  */
-int ssfs_remove(char* file);
+int ssfs_remove(char *file);
 
 // - Bonus
-int ssfs_commit();
+int ssfs_commit(void);
 int ssfs_restore(int cnum);
