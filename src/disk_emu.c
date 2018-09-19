@@ -7,55 +7,68 @@
 #include <unistd.h>
 
 static FILE *fp = NULL;
-static u64 BLOCK_SIZE = 0;
-static u64 MAX_BLOCK = 0;
+static i64 BLOCK_SIZE = 0;
+static i64 MAX_BLOCK = 0;
 
 /*----------------------------------------------------------*/
 /*Close the disk file filled when you don't need it anymore. */
 /*----------------------------------------------------------*/
 i64 close_disk(void) {
-  if (fp != NULL)
-    fclose(fp);
+  int r = -1;
 
-  return 0;
+  if (fp != NULL) {
+    r = fclose(fp);
+    assert(r == 0);
+  }
+
+  return r;
 }
 
 /*---------------------------------------*/
 /*Initializes a disk file filled with 0's*/
 /*---------------------------------------*/
-i64 init_fresh_disk(char *filename, u64 block_size, u64 num_blocks) {
-  u64 i, j;
+i64 init_fresh_disk(char *filename, i64 block_size, i64 num_blocks) {
+  if (block_size <= 0 || num_blocks <= 0 || filename == NULL) {
+    return -1;
+  }
 
   BLOCK_SIZE = block_size;
   MAX_BLOCK = num_blocks;
 
   /*Creates a new file*/
-  fp = fopen(filename, "w+b");
-
+  fp = fopen(filename, "w+be");
   if (fp == NULL) {
     printf("Could not create new disk file %s\n\n", filename);
     return -1;
   }
 
-  /*Fills the file with 0's to its given size*/
-  for (i = 0; i < MAX_BLOCK; i++) {
-    for (j = 0; j < BLOCK_SIZE; j++) {
-      fputc(0, fp);
-    }
+  void *buf = calloc((size_t)block_size, 1);
+  if (buf == NULL) {
+    return -1;
   }
+
+  /*Fills the file with 0's to its given size*/
+  for (i64 i = 0; i < num_blocks; i++) {
+    assert(fwrite(buf, (size_t)block_size, 1, fp) == 1);
+  }
+
+  free(buf);
 
   return 0;
 }
 /*----------------------------*/
 /*Initializes an existing disk*/
 /*----------------------------*/
-i64 init_disk(char *filename, u64 block_size, u64 num_blocks) {
+i64 init_disk(char *filename, i64 block_size, i64 num_blocks) {
+  if (block_size <= 0 || num_blocks <= 0 || filename == NULL) {
+    return -1;
+  }
+
   BLOCK_SIZE = block_size;
   MAX_BLOCK = num_blocks;
 
   /*Opens a file*/
-  fp = fopen(filename, "r+b");
-
+  fp = fopen(filename, "r+be");
   if (fp == NULL) {
     printf("Could not open %s\n\n", filename);
     return -1;
@@ -67,13 +80,15 @@ i64 init_disk(char *filename, u64 block_size, u64 num_blocks) {
 /*-------------------------------------------------------------------*/
 /*Reads a series of blocks from the disk into the buffer             */
 /*-------------------------------------------------------------------*/
-i64 read_blocks(u64 start_address, u64 nblocks, void *buffer) {
-  u64 i, j;
-  i64 e = 0;
+i64 read_blocks(i64 start_address, i64 nblocks, void *buffer) {
+  if (start_address < 0 || nblocks <= 0 || buffer == NULL) {
+    return -1;
+  }
+
   i64 s = 0;
 
-  /*Sets up a temporary buffer*/
-  void *blockRead = (void *)malloc(BLOCK_SIZE);
+  assert(BLOCK_SIZE > 0);
+  assert(MAX_BLOCK > 0);
 
   /*Checks that the data requested is within the range of addresses of the
    * disk*/
@@ -83,38 +98,40 @@ i64 read_blocks(u64 start_address, u64 nblocks, void *buffer) {
   }
 
   /*Goto the data requested from the disk*/
-  i64 offset = (i64)(start_address * BLOCK_SIZE);
-  fseek(fp, offset, SEEK_SET);
+  i64 offset = start_address * BLOCK_SIZE;
+  if (fseek(fp, offset, SEEK_SET) != 0) {
+    return -1;
+  }
 
   /*For every block requested*/
-  for (i = 0; i < nblocks; ++i) {
-    s++;
-    fread(blockRead, BLOCK_SIZE, 1, fp);
+  /*Sets up a temporary buffer*/
+  void *blockRead = malloc((size_t)BLOCK_SIZE);
+  if (blockRead == NULL) {
+    return -1;
+  }
 
-    for (j = 0; j < BLOCK_SIZE; j++) {
-      memcpy(((char *)buffer) + (i * BLOCK_SIZE), blockRead, BLOCK_SIZE);
-    }
+  for (i64 i = 0; i < nblocks; ++i) {
+    s++;
+    assert(fread(blockRead, (size_t)BLOCK_SIZE, 1, fp) == 1);
+    memcpy(((char *)buffer) + (i * BLOCK_SIZE), blockRead, (size_t)BLOCK_SIZE);
   }
 
   free(blockRead);
-
-  /*If no failure return the number of blocks read, else return the negative
-   * number of failures*/
-  if (e == 0)
-    return s;
-  else
-    return e;
+  return s;
 }
 
 /*------------------------------------------------------------------*/
 /*Writes a series of blocks to the disk from the buffer             */
 /*------------------------------------------------------------------*/
-i64 write_blocks(u64 start_address, u64 nblocks, const void *buffer) {
-  u64 i;
-  i64 e = 0;
+i64 write_blocks(i64 start_address, i64 nblocks, const void *buffer) {
+  if (start_address < 0 || nblocks <= 0 || buffer == NULL) {
+    return -1;
+  }
+
   i64 s = 0;
 
-  void *blockWrite = (void *)malloc(BLOCK_SIZE);
+  assert(BLOCK_SIZE > 0);
+  assert(MAX_BLOCK > 0);
 
   /*Checks that the data requested is within the range of addresses of the
    * disk*/
@@ -124,23 +141,23 @@ i64 write_blocks(u64 start_address, u64 nblocks, const void *buffer) {
   }
 
   /*Goto where the data is to be written on the disk*/
-  i64 offset = (i64)(start_address * BLOCK_SIZE);
-  fseek(fp, offset, SEEK_SET);
+  i64 offset = start_address * BLOCK_SIZE;
+  if (fseek(fp, offset, SEEK_SET) != 0) {
+    return -1;
+  }
 
+  void *blockWrite = malloc((size_t)BLOCK_SIZE);
   /*For every block requested*/
-  for (i = 0; i < nblocks; ++i) {
-    memcpy(blockWrite, ((const char *)buffer) + (i * BLOCK_SIZE), BLOCK_SIZE);
+  for (i64 i = 0; i < nblocks; ++i) {
+    memcpy(blockWrite, ((const char *)buffer) + (i * BLOCK_SIZE),
+           (size_t)BLOCK_SIZE);
 
-    fwrite(blockWrite, BLOCK_SIZE, 1, fp);
-    fflush(fp);
+    assert(fwrite(blockWrite, (size_t)BLOCK_SIZE, 1, fp) == 1);
+    assert(fflush(fp) == 0);
     s++;
   }
+
   free(blockWrite);
 
-  /*If no failure return the number of blocks written, else return the
-   * negative number of failures*/
-  if (e == 0)
-    return s;
-  else
-    return e;
+  return s;
 }

@@ -36,7 +36,7 @@ Mallocs size of length + 1. Needs to be freed.
 
 char *rand_text(int length);
 char *rand_text(int length) {
-  size_t len = (size_t)(length + 1);
+  size_t len = (size_t)length + 1;
   char *ret = calloc(len, sizeof(char));
   for (int i = 0; i < length; i++) {
     ret[i] = (char)(rand() % 96 + 32);
@@ -97,7 +97,7 @@ int test_persistence(int *error, int write_length) {
       if (pid == 0) {
         printf("Checking Reading Files ... \n");
         assert(write_length > 0);
-        char *read_buf = calloc((size_t)(write_length + 1), sizeof(char));
+        char *read_buf = calloc((size_t)write_length + 1, sizeof(char));
         mkssfs(0);
         file_id = ssfs_fopen(file_name);
         if (file_id < 0) {
@@ -140,8 +140,7 @@ int test_persistence(int *error, int write_length) {
         }
 
         assert(write_length > 0);
-        size_t wlen = (size_t)(write_length + 1);
-        char *read_buf = calloc(wlen, sizeof(char));
+        char *read_buf = calloc((size_t)write_length + 1, sizeof(char));
         read_buf[0] = '\0';
         mkssfs(0); // Initialize stale file system. Testing if remove
                    // worked
@@ -360,9 +359,12 @@ int test_random_read_files(int *file_id, int *file_size, int *write_ptr,
   for (int i = 0; i < num_file; i++) {
     // Pick a random read length.
     read_length = rand() % MAX_WRITE_BYTE * 2;
+
     // Re adjust the file length.
     if (file_size[i] < read_length)
       read_length = file_size[i];
+
+    assert(read_length >= 0);
     buf = calloc((size_t)(read_length + 1), sizeof(char));
 
     // Get start location
@@ -377,9 +379,11 @@ int test_random_read_files(int *file_id, int *file_size, int *write_ptr,
       fprintf(stderr, "Warning: ssfs_frseek returned negative. Potential "
                       "frseek fail?\n");
     res = ssfs_fread(file_id[i], buf, read_length);
-    if (res != read_length)
+    if (res != read_length) {
+      printf("res=%d, read_length=%d", res, read_length);
       fprintf(stderr, "Warning: ssfs_fread should return number of bytes "
                       "read. Potential read fail?\n");
+    }
     // A little trick so we can use strcmp
     temp = write_buf[i][start_index + read_length];
     write_buf[i][start_index + read_length] = '\0';
@@ -567,8 +571,7 @@ int test_read_write_out_of_bound(int *file_id, int *file_sizes,
                                  char **file_names, int num_file, int *err_no) {
   UNUSED(file_names);
   int res;
-  char a = 'a';
-  char *buf = &a;
+  char dummy[512];
   for (int i = 0; i < num_file; i++) {
     // Attempt to write with a Negative length. Should return error.
     res = ssfs_fwrite(file_id[i], "OI", -1);
@@ -583,7 +586,7 @@ int test_read_write_out_of_bound(int *file_id, int *file_sizes,
       fprintf(stderr, "Returned error. This is Ok\n");
     }
     // Attempt to read with a Negative length. Should return error.
-    res = ssfs_fread(file_id[i], buf, -1);
+    res = ssfs_fread(file_id[i], dummy, -1);
     if (res > 0) {
       fprintf(stderr,
               "Error: ssfs_fread returned positive length. Requested %d "
@@ -594,7 +597,7 @@ int test_read_write_out_of_bound(int *file_id, int *file_sizes,
       fprintf(stderr, "Returned error. This is Ok\n");
     }
     // Attempt to read far larger than file. Should return error.
-    buf = calloc((size_t)file_sizes[i] + ABS_CAP_FILE_SIZE, sizeof(char));
+    char* buf = calloc((size_t)file_sizes[i] + ABS_CAP_FILE_SIZE, sizeof(char));
     // Shift read pointer to 0
     res = ssfs_frseek(file_id[i], 0);
     if (res < 0)

@@ -10,10 +10,14 @@ static file_entry_t file_entry_table[MAX_OPEN_FILES];
 // - Super block management
 
 int32_t sb_read(super_block_t *sb_) {
-  if (sb_ == NULL)
+  if (sb_ == NULL) {
     return MY_ERR;
+  }
 
   char *mem = calloc(BLOCK_SIZE, sizeof(char));
+  if (mem == NULL) {
+    return MY_ERR;
+  }
 
   if (read_blocks(SB_BLOCK, SB_BLOCK_NUM, mem) != SB_BLOCK_NUM) {
     free(mem);
@@ -28,10 +32,14 @@ int32_t sb_read(super_block_t *sb_) {
 
 int32_t sb_update(const super_block_t sb_) {
   char *mem = calloc(sb_.blocks_size, sizeof(char));
+  if (mem == NULL) {
+    return MY_ERR;
+  }
+
   memcpy(mem, &sb, sizeof(sb_));
 
-  if (write_blocks((uint64_t)sb_.sb_block_idx, (uint64_t)sb_.sb_block_num,
-                   mem) != sb_.sb_block_num) {
+  if (write_blocks(sb_.sb_block_idx, sb_.sb_block_num, mem) !=
+      sb_.sb_block_num) {
     free(mem);
     return MY_ERR;
   }
@@ -41,8 +49,9 @@ int32_t sb_update(const super_block_t sb_) {
 }
 
 int32_t sb_init(super_block_t *sb_) {
-  if (sb_ == NULL)
+  if (sb_ == NULL) {
     return MY_ERR;
+  }
 
   sb_->magic = MAGIC;
   sb_->blocks = NUM_BLOCKS;
@@ -62,13 +71,17 @@ int32_t sb_init(super_block_t *sb_) {
 // - Free bit map management
 
 int32_t fbm_read(fbm_table_t *fbm_table_) {
-  if (fbm_table_ == NULL)
+  if (fbm_table_ == NULL) {
     return MY_ERR;
+  }
 
   char *mem = calloc(sb.blocks_size, sizeof(char));
+  if (mem == NULL) {
+    return MY_ERR;
+  }
 
-  if (read_blocks((uint64_t)sb.fbm_block_idx, (uint64_t)sb.fbm_block_num,
-                  mem) != sb.fbm_block_num) {
+  if (read_blocks(sb.fbm_block_idx, sb.fbm_block_num, mem) !=
+      sb.fbm_block_num) {
     free(mem);
     return MY_ERR;
   }
@@ -81,10 +94,14 @@ int32_t fbm_read(fbm_table_t *fbm_table_) {
 
 int32_t fbm_update(const fbm_table_t fbm_table_) {
   char *mem = calloc(sb.blocks_size, sizeof(char));
+  if (mem == NULL) {
+    return MY_ERR;
+  }
+
   memcpy(mem, &fbm_table, sizeof(fbm_table_));
 
-  if (write_blocks((uint64_t)sb.fbm_block_idx, (uint64_t)sb.fbm_block_num,
-                   mem) != sb.fbm_block_num) {
+  if (write_blocks(sb.fbm_block_idx, sb.fbm_block_num, mem) !=
+      sb.fbm_block_num) {
     free(mem);
     return MY_ERR;
   }
@@ -94,11 +111,13 @@ int32_t fbm_update(const fbm_table_t fbm_table_) {
 }
 
 int32_t fbm_init(fbm_table_t *fbm_table_) {
-  if (fbm_table_ == NULL)
+  if (fbm_table_ == NULL) {
     return MY_ERR;
+  }
 
-  for (size_t i = 0; i < sb.blocks; i++)
+  for (size_t i = 0; i < sb.blocks; i++) {
     fbm_table_->block[i] = ENTRY_FREE;
+  }
 
   return MY_OK;
 }
@@ -106,14 +125,16 @@ int32_t fbm_init(fbm_table_t *fbm_table_) {
 // - Block management (updates the free bit map table)
 
 int32_t block_allocate(fbm_table_t *fbm_table_, int32_t idx) {
-  if (fbm_table_ == NULL)
+  if (fbm_table_ == NULL) {
     return MY_ERR;
+  }
 
-  if (idx >= 0 && idx < (int32_t)sb.blocks &&
+  if (idx >= 0 && (uint32_t)idx < sb.blocks &&
       fbm_table_->block[idx] == ENTRY_FREE) {
     fbm_table_->block[idx] = ENTRY_TAKEN;
-    if (fbm_update(*fbm_table_) == MY_ERR)
+    if (fbm_update(*fbm_table_) == MY_ERR) {
       return MY_ERR;
+    }
 
     return idx;
   }
@@ -122,29 +143,33 @@ int32_t block_allocate(fbm_table_t *fbm_table_, int32_t idx) {
   for (size_t i = 0; i < sb.blocks; i++) {
     if (fbm_table_->block[i] == ENTRY_FREE) {
       fbm_table_->block[i] = ENTRY_TAKEN;
+      // TODO(vl): Add an assert
       r = (int32_t)i;
       break;
     }
   }
 
   if (r > 0) {
-    if (fbm_update(*fbm_table_) == MY_ERR)
+    if (fbm_update(*fbm_table_) == MY_ERR) {
       return MY_ERR;
+    }
   }
 
   return r;
 }
 
 int32_t block_deallocate(fbm_table_t *fbm_table_, int32_t idx) {
-  if (fbm_table_ == NULL || idx < 0)
+  if (fbm_table_ == NULL || idx < 0) {
     return MY_ERR;
+  }
 
-  if (idx < (int32_t)sb.blocks) {
+  if ((uint32_t)idx < sb.blocks) {
     if (fbm_table_->block[idx] == ENTRY_TAKEN) {
       fbm_table_->block[idx] = ENTRY_FREE;
 
-      if (fbm_update(*fbm_table_) == MY_ERR)
+      if (fbm_update(*fbm_table_) == MY_ERR) {
         return MY_ERR;
+      }
     }
   }
 
@@ -156,12 +181,14 @@ int32_t block_deallocate(fbm_table_t *fbm_table_, int32_t idx) {
 int32_t dir_find(dir_entry_t *d, uint32_t size, const char *name) {
   assert(size == MAX_FILES);
 
-  if (d == NULL || name == NULL)
+  if (d == NULL || name == NULL) {
     return MY_ERR;
+  }
 
   int32_t r = MY_ERR;
   for (size_t i = 0; i < size; i++) {
     if (d[i].free == ENTRY_TAKEN && strncmp(d[i].fn, name, MAX_FN_LEN) == 0) {
+      // TODO(vl): Add an assert for the cast
       r = (int32_t)i;
       break;
     }
@@ -207,9 +234,9 @@ int32_t dir_read(dir_entry_t *d, uint32_t size) {
   assert(size == MAX_FILES);
 
   if (d == NULL ||
-      read_blocks((uint64_t)sb.dir_block_idx, (uint64_t)sb.dir_block_num, d) !=
-          sb.dir_block_num)
+      read_blocks(sb.dir_block_idx, sb.dir_block_num, d) != sb.dir_block_num) {
     return MY_ERR;
+  }
 
   return MY_OK;
 }
@@ -218,9 +245,9 @@ int32_t dir_update(const dir_entry_t *d, uint32_t size) {
   assert(size == MAX_FILES);
 
   if (d == NULL ||
-      write_blocks((uint64_t)sb.dir_block_idx, (uint64_t)sb.dir_block_num, d) !=
-          sb.dir_block_num)
+      write_blocks(sb.dir_block_idx, sb.dir_block_num, d) != sb.dir_block_num) {
     return MY_ERR;
+  }
 
   return MY_OK;
 }
@@ -228,8 +255,9 @@ int32_t dir_update(const dir_entry_t *d, uint32_t size) {
 int32_t dir_init(dir_entry_t *d, uint32_t size) {
   assert(size == MAX_FILES);
 
-  if (d == NULL)
+  if (d == NULL) {
     return MY_ERR;
+  }
 
   for (size_t i = 0; i < size; i++) {
     d[i].free = ENTRY_FREE;
@@ -243,13 +271,15 @@ int32_t dir_init(dir_entry_t *d, uint32_t size) {
 // - File descriptor management
 
 int32_t fdt_remove(file_entry_t *f, uint32_t size, int fd) {
-  if (f == NULL)
+  if (f == NULL) {
     return MY_ERR;
+  }
 
   int32_t r = MY_ERR;
-  if (fd >= 0 && fd < (int32_t)size) {
-    if (f[fd].free == ENTRY_FREE)
+  if (fd >= 0 && (uint32_t)fd < size) {
+    if (f[fd].free == ENTRY_FREE) {
       return MY_ERR;
+    }
 
     f[fd].free = ENTRY_FREE;
     f[fd].linked_inode = ENTRY_INVALID;
@@ -262,16 +292,19 @@ int32_t fdt_remove(file_entry_t *f, uint32_t size, int fd) {
 }
 
 int32_t fdt_add(file_entry_t *f, uint32_t size, uint32_t inode_idx) {
-  if (f == NULL)
+  if (f == NULL) {
     return MY_ERR;
+  }
 
   int32_t r = MY_ERR;
   for (size_t i = 0; i < size; i++) {
     if (f[i].free == ENTRY_FREE) {
       f[i].free = ENTRY_TAKEN;
+      // TODO(vl): Add an assert for the cast
       f[i].linked_inode = (int32_t)inode_idx;
       f[i].ptr_read = 0;
       f[i].ptr_write = 0;
+      // TODO(vl): Add an assert for the cast
       r = (int32_t)i;
 
       break;
@@ -282,8 +315,9 @@ int32_t fdt_add(file_entry_t *f, uint32_t size, uint32_t inode_idx) {
 }
 
 int32_t fdt_init(file_entry_t *f, uint32_t size) {
-  if (f == NULL)
+  if (f == NULL) {
     return MY_ERR;
+  }
 
   for (size_t i = 0; i < size; i++) {
     file_entry_table[i].free = ENTRY_FREE;
@@ -300,11 +334,13 @@ int32_t fdt_init(file_entry_t *f, uint32_t size) {
 int32_t inode_find(inode_t *p, uint32_t size, int32_t idx) {
   assert(size == MAX_FILES);
 
-  if (p == NULL && idx < 0)
+  if (p == NULL && idx < 0) {
     return MY_ERR;
+  }
 
-  if ((size_t)idx < size)
+  if ((size_t)idx < size) {
     return idx;
+  }
 
   return MY_ERR;
 }
@@ -312,16 +348,18 @@ int32_t inode_find(inode_t *p, uint32_t size, int32_t idx) {
 int32_t inode_remove(inode_t *p, uint32_t size, int32_t idx) {
   assert(size == MAX_FILES);
 
-  if (p == NULL || idx < 0)
+  if (p == NULL || idx < 0) {
     return MY_ERR;
+  }
 
   if ((size_t)idx < size) {
     p[idx].next = ENTRY_INVALID;
     p[idx].free = ENTRY_FREE;
     p[idx].size = 0;
 
-    for (size_t j = 0; j < BLOCKS_PER_INODE; j++)
+    for (size_t j = 0; j < BLOCKS_PER_INODE; j++) {
       p[idx].ptr[j] = ENTRY_INVALID;
+    }
 
     return MY_OK;
   }
@@ -332,13 +370,15 @@ int32_t inode_remove(inode_t *p, uint32_t size, int32_t idx) {
 int32_t inode_allocate(inode_t *p, uint32_t size) {
   assert(size == MAX_FILES);
 
-  if (p == NULL)
+  if (p == NULL) {
     return MY_ERR;
+  }
 
   int32_t r = MY_ERR;
   for (size_t i = 0; i < size; i++) {
     if (p[i].free == ENTRY_FREE) {
       p[i].free = ENTRY_TAKEN;
+      // TODO(vl): Add an assert for the cast
       r = (int32_t)i;
       break;
     }
@@ -350,16 +390,18 @@ int32_t inode_allocate(inode_t *p, uint32_t size) {
 int32_t inode_init(inode_t *p, uint32_t size) {
   assert(size == MAX_FILES);
 
-  if (p == NULL)
+  if (p == NULL) {
     return MY_ERR;
+  }
 
   for (size_t i = 0; i < size; i++) {
     p[i].next = ENTRY_INVALID;
     p[i].free = ENTRY_FREE;
     p[i].size = 0;
 
-    for (size_t j = 0; j < BLOCKS_PER_INODE; j++)
+    for (size_t j = 0; j < BLOCKS_PER_INODE; j++) {
       p[i].ptr[j] = ENTRY_INVALID;
+    }
   }
 
   return MY_OK;
@@ -369,10 +411,10 @@ int32_t inode_read(inode_t *p, uint32_t size) {
   assert(size == MAX_FILES);
   assert(size / INODE_BLOCK_NUM * sizeof(inode_t) == BLOCK_SIZE);
 
-  if (p == NULL ||
-      read_blocks((uint64_t)sb.inode_block_idx, (uint64_t)sb.inode_block_num,
-                  p) != sb.inode_block_num)
+  if (p == NULL || read_blocks(sb.inode_block_idx, sb.inode_block_num, p) !=
+                       sb.inode_block_num) {
     return MY_ERR;
+  }
 
   return MY_OK;
 }
@@ -381,31 +423,38 @@ int32_t inode_update(const inode_t *p, uint32_t size) {
   assert(size == MAX_FILES);
   assert(size / INODE_BLOCK_NUM * sizeof(inode_t) == BLOCK_SIZE);
 
-  if (p == NULL ||
-      write_blocks((uint64_t)sb.inode_block_idx, (uint64_t)sb.inode_block_num,
-                   p) != sb.inode_block_num)
+  if (p == NULL || write_blocks(sb.inode_block_idx, sb.inode_block_num, p) !=
+                       sb.inode_block_num) {
     return MY_ERR;
+  }
 
   return MY_OK;
 }
 
 int32_t *inode_get_block_list(const inode_t p, uint32_t *size) {
-  if (size == NULL)
+  if (size == NULL) {
     return NULL;
+  }
 
   int32_t *ptr = calloc(MAX_BLOCKS_PER_FILE, sizeof(int32_t));
+  if (ptr == NULL) {
+    return NULL;
+  }
+
   *size = MAX_BLOCKS_PER_FILE;
 
-  for (size_t i = 0; i < BLOCKS_PER_INODE; i++)
+  for (size_t i = 0; i < BLOCKS_PER_INODE; i++) {
     ptr[i] = p.ptr[i];
+  }
 
   int32_t *iptr = (int32_t *)malloc(sb.blocks_size);
 
   assert(p.next != ENTRY_INVALID);
-  assert(read_blocks((uint64_t)p.next, 1, iptr) == 1);
+  assert(read_blocks(p.next, 1, iptr) == 1);
 
-  for (size_t i = BLOCKS_PER_INODE, j = 0; i < *size; i++, j++)
+  for (size_t i = BLOCKS_PER_INODE, j = 0; i < *size; i++, j++) {
     ptr[i] = iptr[j];
+  }
 
   free(iptr);
 
@@ -413,22 +462,24 @@ int32_t *inode_get_block_list(const inode_t p, uint32_t *size) {
 }
 
 int32_t inode_set_block_list(inode_t *p, int32_t *block_list) {
-  if (p == NULL || block_list == NULL)
+  if (p == NULL || block_list == NULL) {
     return MY_ERR;
+  }
 
-  for (size_t i = 0; i < BLOCKS_PER_INODE; i++)
+  for (size_t i = 0; i < BLOCKS_PER_INODE; i++) {
     p->ptr[i] = block_list[i];
+  }
 
   assert(p->next != ENTRY_INVALID);
-  assert(write_blocks((uint64_t)p->next, 1, &block_list[BLOCKS_PER_INODE]) ==
-         1);
+  assert(write_blocks(p->next, 1, &block_list[BLOCKS_PER_INODE]) == 1);
 
   return MY_OK;
 }
 
 int32_t inode_free_block_list(int32_t *block_list) {
-  if (block_list == NULL)
+  if (block_list == NULL) {
     return MY_ERR;
+  }
 
   free(block_list);
 
@@ -446,18 +497,23 @@ void mkssfs(int fresh) {
     assert(fbm_init(&fbm_table) == MY_OK);
 
     assert(init_fresh_disk(MY_NAME, sb.blocks_size, sb.blocks) == 0);
+
+    // TODO(vl): Add an assert for the cast
     assert(block_allocate(&fbm_table, sb.fbm_block_idx) ==
            (int32_t)sb.fbm_block_idx);
+    // TODO(vl): Add an assert for the cast
     assert(block_allocate(&fbm_table, sb.sb_block_idx) ==
            (int32_t)sb.sb_block_idx);
 
     for (int32_t i = sb.dir_block_idx; i < sb.dir_block_idx + sb.dir_block_num;
-         i++)
+         i++) {
       assert(block_allocate(&fbm_table, i) == i);
+    }
 
     for (int32_t i = sb.inode_block_idx;
-         i < sb.inode_block_idx + sb.inode_block_num; i++)
+         i < sb.inode_block_idx + sb.inode_block_num; i++) {
       assert(block_allocate(&fbm_table, i) == i);
+    }
 
     assert(sb_update(sb) == MY_OK);
     assert(inode_update(inode_table, MAX_FILES) == MY_OK);
@@ -483,10 +539,12 @@ int ssfs_fopen(char *name) {
   int32_t dir_idx = dir_find(dir_table, MAX_FILES, name);
   if (dir_idx == MY_ERR) {
     int32_t inode_idx = inode_allocate(inode_table, MAX_FILES);
-    if (inode_idx == MY_ERR)
+    if (inode_idx == MY_ERR) {
       return -1;
+    }
 
     inode_t *p = &inode_table[inode_idx];
+    // TODO(vl): Add an assert for the cast
     p->next = (int16_t)block_allocate(&fbm_table, -1);
     if (p->next == MY_ERR) {
       p->next = ENTRY_INVALID;
@@ -494,45 +552,55 @@ int ssfs_fopen(char *name) {
     }
 
     int32_t *iptr = (int32_t *)calloc(sb.blocks_size, 1);
-
+    // TODO(vl): Runtime check instead of assert
+    assert(iptr != NULL);
     assert(sb.blocks_size == INDIRECT_BLOCKS * INDIRECT_BLOCK_ENTRY_SIZE);
 
-    for (size_t i = 0; i < INDIRECT_BLOCKS; i++)
+    for (size_t i = 0; i < INDIRECT_BLOCKS; i++) {
       iptr[i] = ENTRY_INVALID;
+    }
 
-    assert(write_blocks((uint64_t)p->next, 1, iptr) == 1);
+    assert(write_blocks(p->next, 1, iptr) == 1);
 
     free(iptr);
 
     assert(inode_update(inode_table, MAX_FILES) == MY_OK);
+    assert(inode_idx >= 0);
     assert(dir_add(dir_table, MAX_FILES, name, (uint32_t)inode_idx) == MY_OK);
     assert(dir_update(dir_table, MAX_FILES) == MY_OK);
 
     return fdt_add(file_entry_table, MAX_OPEN_FILES, (uint32_t)inode_idx);
-  } else {
-    int32_t inode_idx = dir_table[dir_idx].linked_inode;
-    if (inode_idx == MY_ERR)
-      return -1;
-
-    for (size_t i = 0; i < MAX_OPEN_FILES; i++) {
-      if (file_entry_table[i].linked_inode == inode_idx)
-        return (int32_t)i;
-    }
-
-    int32_t fd = fdt_add(file_entry_table, MAX_OPEN_FILES, (uint32_t)inode_idx);
-    if (fd == MY_ERR)
-      return -1;
-
-    file_entry_table[fd].ptr_read = 0;
-    file_entry_table[fd].ptr_write = (int32_t)inode_table[inode_idx].size;
-
-    return fd;
   }
+
+  int32_t inode_idx = dir_table[dir_idx].linked_inode;
+  if (inode_idx == MY_ERR) {
+    return -1;
+  }
+
+  for (size_t i = 0; i < MAX_OPEN_FILES; i++) {
+    if (file_entry_table[i].linked_inode ==
+        inode_idx) { // TODO(vl): add an assert for the cast
+      return (int32_t)i;
+    }
+  }
+
+  assert(inode_idx >= 0);
+  int32_t fd = fdt_add(file_entry_table, MAX_OPEN_FILES, (uint32_t)inode_idx);
+  if (fd == MY_ERR) {
+    return -1;
+  }
+
+  file_entry_table[fd].ptr_read = 0;
+  // TODO(vl): add an assert to avoid overflow
+  file_entry_table[fd].ptr_write = (int32_t)inode_table[inode_idx].size;
+
+  return fd;
 }
 
 int ssfs_fclose(int fileID) {
-  if (fileID >= 0 && fileID < MAX_OPEN_FILES)
+  if (fileID >= 0 && fileID < MAX_OPEN_FILES) {
     return fdt_remove(file_entry_table, MAX_OPEN_FILES, fileID);
+  }
 
   return MY_ERR;
 }
@@ -540,9 +608,11 @@ int ssfs_fclose(int fileID) {
 int ssfs_frseek(int fileID, int loc) {
   if (fileID >= 0 && fileID < MAX_OPEN_FILES && loc >= 0) {
     int32_t inode_idx = file_entry_table[fileID].linked_inode;
+    // TODO(vl): Add an assert for the size cast
     if (inode_idx == ENTRY_INVALID ||
-        loc > (int32_t)inode_table[inode_idx].size)
+        loc > (int32_t)inode_table[inode_idx].size) {
       return MY_ERR;
+    }
 
     file_entry_table[fileID].ptr_read = loc;
 
@@ -555,9 +625,11 @@ int ssfs_frseek(int fileID, int loc) {
 int ssfs_fwseek(int fileID, int loc) {
   if (fileID >= 0 && fileID < MAX_OPEN_FILES && loc >= 0) {
     int32_t inode_idx = file_entry_table[fileID].linked_inode;
+    // TODO(vl): Add an assert for the size cast
     if (inode_idx == ENTRY_INVALID ||
-        loc > (int32_t)inode_table[inode_idx].size)
+        loc > (int32_t)inode_table[inode_idx].size) {
       return MY_ERR;
+    }
 
     file_entry_table[fileID].ptr_write = loc;
 
@@ -568,33 +640,39 @@ int ssfs_fwseek(int fileID, int loc) {
 }
 
 int ssfs_fwrite(int fileID, char *buf, int length) {
-  if (buf == NULL || length <= 0)
+  if (buf == NULL || length <= 0) {
     return MY_ERR;
+  }
 
   int32_t written_bytes = MY_ERR;
 
   if (fileID >= 0 && fileID < MAX_OPEN_FILES) {
     int32_t inode_idx = file_entry_table[fileID].linked_inode;
-    if (inode_idx == ENTRY_INVALID)
+    if (inode_idx == ENTRY_INVALID) {
       return MY_ERR;
+    }
 
     inode_t *node = &inode_table[inode_idx];
     file_entry_t *fd = &file_entry_table[fileID];
 
     int32_t avail = FILE_SIZE_MAX - fd->ptr_write;
-    if (avail <= 0)
+    if (avail <= 0) {
       return MY_ERR;
+    }
 
     int32_t len = 0;
-    if (avail >= length)
+    if (avail >= length) {
       len = length;
-    else
+    } else {
       len = avail;
+    }
 
+    // TODO(vl): Add an assert for the cast
     int32_t cur_block = (fd->ptr_write + len) / (int32_t)sb.blocks_size;
 
     uint32_t block_list_size = 0;
     int32_t *block_list = inode_get_block_list(*node, &block_list_size);
+    // TODO(vl): Add an assert for the cast
     if (cur_block >= (int32_t)block_list_size) {
       cur_block = (int32_t)(block_list_size - 1);
     }
@@ -608,16 +686,20 @@ int ssfs_fwrite(int fileID, char *buf, int length) {
 
     assert(inode_set_block_list(node, block_list) == MY_OK);
 
-    if ((int32_t)node->size < fd->ptr_write + len)
+    // TODO(vl) Add an assert for the cast
+    if ((int32_t)node->size < fd->ptr_write + len) {
       node->size = (uint32_t)(fd->ptr_write + len);
+    }
 
     assert(inode_update(inode_table, MAX_FILES) == MY_OK);
 
     char *file_buf = calloc(FILE_SIZE_MAX, sizeof(char));
     char *file_cursor = file_buf;
 
+    assert(file_buf != NULL);
+
     for (int32_t i = 0; i <= cur_block; i++) {
-      assert(read_blocks((uint64_t)block_list[i], 1, file_cursor) == 1);
+      assert(read_blocks(block_list[i], 1, file_cursor) == 1);
 
       file_cursor += sb.blocks_size;
     }
@@ -628,7 +710,7 @@ int ssfs_fwrite(int fileID, char *buf, int length) {
     file_cursor = file_buf;
 
     for (int32_t i = 0; i <= cur_block; i++) {
-      assert(write_blocks((uint64_t)block_list[i], 1, file_cursor) == 1);
+      assert(write_blocks(block_list[i], 1, file_cursor) == 1);
 
       file_cursor += sb.blocks_size;
     }
@@ -636,51 +718,60 @@ int ssfs_fwrite(int fileID, char *buf, int length) {
     free(file_buf);
     assert(inode_free_block_list(block_list) == MY_OK);
 
-    if (len == avail)
+    if (len == avail) {
       written_bytes = -1;
+    }
   }
 
   return written_bytes;
 }
 
 int ssfs_fread(int fileID, char *buf, int length) {
-  if (buf == NULL || length <= 0)
+  if (buf == NULL || length < 0) {
     return MY_ERR;
+  }
 
   int32_t read_bytes = MY_ERR;
 
   if (fileID >= 0 && fileID < MAX_OPEN_FILES) {
     int32_t inode_idx = file_entry_table[fileID].linked_inode;
-    if (inode_idx == ENTRY_INVALID)
+    if (inode_idx == ENTRY_INVALID) {
       return MY_ERR;
+    }
 
     inode_t *node = &inode_table[inode_idx];
     file_entry_t *fd = &file_entry_table[fileID];
 
+    // TODO(vl): Add an assert for the cast
     int32_t avail = (int32_t)node->size - fd->ptr_read;
-    if (avail <= 0)
+    if (avail <= 0) {
       return MY_ERR;
+    }
 
     int32_t len = 0;
-    if (avail >= length)
+    if (avail >= length) {
       len = length;
-    else
+    } else {
       len = avail;
+    }
 
     char *file_buf = calloc(FILE_SIZE_MAX, sizeof(char));
     char *file_cursor = file_buf;
+
+    assert(file_buf != NULL);
 
     int32_t cur_block = (fd->ptr_read + len) / (int32_t)sb.blocks_size;
 
     uint32_t block_list_size = 0;
     int32_t *block_list = inode_get_block_list(*node, &block_list_size);
+    // TODO(vl): Add an assert for the cast
     if (cur_block >= (int32_t)block_list_size) {
       cur_block = (int32_t)(block_list_size - 1);
     }
 
     for (int32_t i = 0; i <= cur_block; i++) {
       assert(block_list[i] != ENTRY_INVALID);
-      assert(read_blocks((uint64_t)block_list[i], 1, file_cursor) == 1);
+      assert(read_blocks(block_list[i], 1, file_cursor) == 1);
 
       file_cursor += sb.blocks_size;
     }
@@ -699,8 +790,9 @@ int ssfs_fread(int fileID, char *buf, int length) {
 
 int ssfs_remove(char *file) {
   int32_t dir_idx = dir_find(dir_table, MAX_FILES, file);
-  if (dir_idx == MY_ERR)
+  if (dir_idx == MY_ERR) {
     return MY_ERR;
+  }
 
   int32_t inode_idx = dir_table[dir_idx].linked_inode;
   assert(inode_idx != ENTRY_INVALID);
@@ -708,16 +800,19 @@ int ssfs_remove(char *file) {
 
   for (size_t i = 0; i < MAX_OPEN_FILES; i++) {
     if (file_entry_table[i].free == ENTRY_TAKEN &&
-        file_entry_table[i].linked_inode == inode_idx)
+        file_entry_table[i].linked_inode ==
+            inode_idx) { // TODO(vl): Add an assert for the cast
       assert(ssfs_fclose((int)i) == 0);
+    }
   }
 
   uint32_t block_list_size = 0;
   int32_t *block_list = inode_get_block_list(node, &block_list_size);
 
   for (size_t i = 0; i < block_list_size; i++) {
-    if (block_list[i] != ENTRY_INVALID)
+    if (block_list[i] != ENTRY_INVALID) {
       assert(block_deallocate(&fbm_table, block_list[i]) == MY_OK);
+    }
   }
 
   assert(inode_free_block_list(block_list) == MY_OK);

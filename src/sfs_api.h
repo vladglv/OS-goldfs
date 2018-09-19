@@ -41,11 +41,11 @@
 // - Defines for table entry states
 #define ENTRY_TAKEN 0
 #define ENTRY_FREE 1
-#define ENTRY_INVALID -1
+#define ENTRY_INVALID (-1)
 
 // - Defines of error codes
 #define MY_OK 0
-#define MY_ERR -1
+#define MY_ERR (-1)
 
 static char MY_NAME[] = "goldfs";
 
@@ -145,67 +145,67 @@ typedef struct __attribute__((packed)) _file_entry {
 
 /**
  * @brief Reads the Super-block from disk.
- * @param sb Super-block
+ * @param sb_ Super-block
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t sb_read(super_block_t *sb);
+int32_t sb_read(super_block_t *sb_);
 
 /**
  * @brief Updates the Super-block on disk.
- * @param sb Super-block
+ * @param sb_ Super-block
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t sb_update(const super_block_t sb);
+int32_t sb_update(const super_block_t sb_);
 
 /**
  * @brief Initialises the Super-block in memory.
- * @param sb Super-block
+ * @param sb_ Super-block
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t sb_init(super_block_t *sb);
+int32_t sb_init(super_block_t *sb_);
 
 // - Free bit map management
 
 /**
  * @brief Reads the free bit map from disk.
- * @param fbm_table Free bit map table
+ * @param fbm_table_ Free bit map table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t fbm_read(fbm_table_t *fbm_table);
+int32_t fbm_read(fbm_table_t *fbm_table_);
 
 /**
  * @brief Updates the free bit map on disk.
- * @param fbm_table Free bit map table
+ * @param fbm_table_ Free bit map table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t fbm_update(const fbm_table_t fbm_table);
+int32_t fbm_update(const fbm_table_t fbm_table_);
 
 /**
  * @brief Initialises the free bit map in memory.
- * @param fbm_table Free bit map table
+ * @param fbm_table_ Free bit map table
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
 
-int32_t fbm_init(fbm_table_t *fbm_table);
+int32_t fbm_init(fbm_table_t *fbm_table_);
 
 // - Block management (updates the free bit map table)
 
 /**
  * @brief Allocates a free block and returns its index. If the requested
  * index is taken, then, the function fails.
- * @param fbm_table Free bit map table
+ * @param fbm_table_ Free bit map table
  * @param idx A suggested index is considered only if the value of idx is >= 0
  * @return Index of the block or MY_ERR otherwise
  */
-int32_t block_allocate(fbm_table_t *fbm_table, int32_t idx);
+int32_t block_allocate(fbm_table_t *fbm_table_, int32_t idx);
 
 /**
  * @brief Marks a block as free.
- * @param fbm_table Free bit map table
+ * @param fbm_table_ Free bit map table
  * @param idx Block index in free bit map
  * @return MY_OK is returned on success and MY_ERR otherwise
  */
-int32_t block_deallocate(fbm_table_t *fbm_table, int32_t idx);
+int32_t block_deallocate(fbm_table_t *fbm_table_, int32_t idx);
 
 // - Directory management
 
