@@ -5,6 +5,11 @@ authors = ["vladglv <vladglv@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
+libc = { version = "0.2", features = ["align"] }
+
+[profile.release]
+lto = true
+panic = 'abort'
 
 [lib]
 name = "disk_emu"

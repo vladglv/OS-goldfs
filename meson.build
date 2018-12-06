@@ -32,9 +32,10 @@ if compiler == 'clang' or compiler == 'gcc'
 
   cc_args_exe = cc_args + ['-fPIC']
   la += ['-lpthread', '-ldl', '-lasan', '-lubsan']
-  #la += ['-ldisk_emu']
+  #la += ['-lpthread', '-ldl']
+  la += ['-ldisk_emu']
   #la += ['-L' + meson.build_root() + '/../disk_emu/target/x86_64-unknown-linux-musl/release/']
-  #la += ['-L' + meson.build_root() + '/../disk_emu/target/release/']
+  la += ['-L' + meson.build_root() + '/../disk_emu/target/release/']
 else
   warning('c_args is only configured for clang and gcc')
   warning('The build may work but is untested')
