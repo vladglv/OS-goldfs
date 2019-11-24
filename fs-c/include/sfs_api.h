@@ -7,7 +7,7 @@
 #include <string.h>
 
 // - Provided code
-#include "disk_emu.h"
+#include <disk_emu.h>
 
 // - Require C11 to compile the code
 #if __STDC_VERSION__ < 201112L

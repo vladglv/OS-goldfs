@@ -1,4 +1,4 @@
-#include "disk_emu.h"
+#include <disk_emu.h>
 #include <stdio.h>
 
 extern i64 vl_close_disk(FILE *);
