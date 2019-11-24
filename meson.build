@@ -2,6 +2,8 @@ project('os-goldfs', 'c', default_options : ['c_std=c11'], version : '0.2')
 
 compiler = meson.get_compiler('c').get_id()
 
+use_san = get_option('use-sanitizers')
+
 cc_args = []
 cc_args_exe = []
 la = []
@@ -20,7 +22,6 @@ if compiler == 'clang' or compiler == 'gcc'
     '-pedantic',
     '-pedantic-errors',
     '-fstack-protector-strong',
-    '-fsanitize=address,undefined,leak',
     ]
 
   if compiler == 'clang'
@@ -31,11 +32,15 @@ if compiler == 'clang' or compiler == 'gcc'
   endif
 
   cc_args_exe = cc_args + ['-fPIC']
-  la += ['-lpthread', '-ldl', '-lasan', '-lubsan']
-  #la += ['-lpthread', '-ldl']
+  
+  if use_san
+    cc_args += ['-fsanitize=address,undefined,leak']
+    la += ['-lasan', '-lubsan']
+  endif
+
+  la += ['-lpthread', '-ldl']
   la += ['-ldisk_emu']
-  #la += ['-L' + meson.build_root() + '/../disk_emu/target/x86_64-unknown-linux-musl/release/']
-  la += ['-L' + meson.build_root() + '/../disk_emu/target/release/']
+  la += ['-L' + meson.build_root() + '/release']
 else
   warning('c_args is only configured for clang and gcc')
   warning('The build may work but is untested')

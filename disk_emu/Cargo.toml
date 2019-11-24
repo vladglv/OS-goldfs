@@ -7,8 +7,11 @@ edition = "2018"
 [dependencies]
 libc = { version = "0.2", features = ["align"] }
 
+[profile.dev]
+panic = 'abort'
+
 [profile.release]
-lto = true
+lto = 'thin'
 panic = 'abort'
 
 [lib]

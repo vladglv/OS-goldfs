@@ -1,7 +1,19 @@
 #![no_std]
+
+// - Unstable bits
+#![feature(lang_items)]
+#[lang = "eh_personality"]
+extern "C" fn eh_personality() {}
+// - Unstable bits
+
 extern crate libc;
 
 use libc::{c_char, c_void, FILE};
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn vl_close_disk(file: *mut FILE) -> i64 {
