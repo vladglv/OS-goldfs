@@ -1,0 +1,31 @@
+[package]
+name = "fs"
+version = "0.1.0"
+authors = ["vladglv <vladglv@users.noreply.github.com>"]
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+libc = { version = "0.2", features = ["align"] }
+
+[build-dependencies]
+cc = "1.0"
+
+[profile.dev]
+debug = true
+debug-assertions = true
+overflow-checks = true
+
+[profile.release]
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = 'thin'
+
+[[bin]]
+name = "sfs-test-1"
+path = "bin/test-1.rs"
+
+[[bin]]
+name = "sfs-test-2"
+path = "bin/test-2.rs"

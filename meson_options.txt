@@ -1,1 +1,0 @@
-option('use-sanitizers', type: 'boolean', value: false, description: 'Build the code with the sanitizers.')

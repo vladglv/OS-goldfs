@@ -71,10 +71,3 @@ int simple_test(void) {
   return 0;
 }
 
-/* The main testing program
- */
-int main(int argc, char **argv) {
-  UNUSED(argc);
-  UNUSED(argv);
-  simple_test();
-}
