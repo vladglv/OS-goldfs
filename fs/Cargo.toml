@@ -10,6 +10,7 @@ libc = { version = "0.2", features = ["align"] }
 
 [build-dependencies]
 cc = "1.0"
+bindgen = "0.52.0"
 
 [profile.dev]
 debug = true

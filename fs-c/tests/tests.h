@@ -89,3 +89,6 @@ int test_persistence(int *error, int write_length);
 
 // Help functionn
 int free_name_element(char **name_list, int num_file);
+
+char *rand_text(int length);
+

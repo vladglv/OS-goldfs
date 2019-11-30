@@ -1,8 +1,5 @@
 #include "tests.h"
 
-// A more difficult test. Will attempt to overload your file system.
-// For all tests, -1 is considered error and 0 is considered success.
-int difficult_test(void);
 int difficult_test(void) {
   char **write_buf;
   int *file_id = calloc(ABS_CAP_FD, sizeof(int));

@@ -34,7 +34,6 @@ Generates garbage as text.
 Mallocs size of length + 1. Needs to be freed.
 */
 
-char *rand_text(int length);
 char *rand_text(int length) {
   size_t len = (size_t)length + 1;
   char *ret = calloc(len, sizeof(char));

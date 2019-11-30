@@ -1,8 +1,6 @@
 extern crate fs;
 
-extern "C" {
-    fn difficult_test() -> i32;
-}
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 fn main() {
     unsafe {

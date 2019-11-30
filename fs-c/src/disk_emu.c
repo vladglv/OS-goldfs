@@ -1,12 +1,6 @@
 #include <disk_emu.h>
 #include <stdio.h>
 
-extern i64 vl_close_disk(FILE *);
-extern i64 vl_init_fresh_disk(FILE **, char *, i64, i64, i64 *, i64 *);
-extern i64 vl_init_disk(FILE **, char *, i64, i64, i64 *, i64 *);
-extern i64 vl_write_blocks(FILE *, i64, i64, i64, i64, const void *);
-extern i64 vl_read_blocks(FILE *, i64, i64, i64, i64, void *);
-
 static FILE *fp = NULL;
 static i64 BLOCK_SIZE = 0;
 static i64 MAX_BLOCK = 0;
